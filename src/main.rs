@@ -7,27 +7,21 @@ use std::fs::read_dir;
 
 const INFURA_API: &str = "https://ipfs.infura.io:5001";
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    /// Name of the person to greet
     #[clap(short, long)]
     id: String,
     #[clap(short, long)]
     secret: String,
     #[clap(short, long, default_value_t = String::from(INFURA_API))]
     url: String,
-    #[clap(short, long, default_missing_value = "true")]
-    pin: String,
+    #[clap(short, long, parse(from_flag))]
+    pin: bool,
     #[clap(help = "The file path or directory to upload")]
     path: String,
-}
-
-impl Args {
-    fn pin_value(m: String) -> bool {
-        m.parse().expect("non boolean value for pin")
-    }
+    #[clap(short, long, parse(from_flag))]
+    multiple_files: bool,
 }
 
 #[tokio::main]
@@ -36,8 +30,9 @@ async fn main() {
     let id = args.id;
     let secret = args.secret;
     let url = args.url;
-    let pin_value = Args::pin_value(args.pin);
+    let pin_value = args.pin;
     let path = args.path;
+    let multiple_files = args.multiple_files;
 
     let is_file: bool = metadata(path.clone()).expect("not a valid path").is_file();
 
@@ -52,7 +47,14 @@ async fn main() {
             .map(|e| e.path().to_string_lossy().into_owned())
             .collect::<Vec<_>>();
         let api = IPFS::new(url, id, secret);
-        let out = api.add_directory(paths).await;
-        println!("{:?}", out);
+
+        if multiple_files {
+            let out = api.add_multiple_files(paths).await;
+            println!("{:?}", out);
+        } else {
+            let out = api.add_directory(paths).await;
+
+            println!("{:?}", out);
+        }
     }
 }
