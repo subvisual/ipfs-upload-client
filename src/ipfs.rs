@@ -2,6 +2,7 @@ use reqwest::{multipart, multipart::Part, Body, Client};
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+#[allow(clippy::upper_case_acronyms)]
 pub struct IPFS {
     client: Client,
     url: String,
@@ -39,19 +40,6 @@ impl IPFS {
 
         Ok(response)
     }
-
-    //pub async fn add_dir(
-    //    &self,
-    //    file_paths : Vec<&str>,
-    //) -> Result<String, Box<dyn std::error::Error>> {
-    //    let url = format!(
-    //        "{url}/api/v0/add?wrap-with-directory=true",
-    //        url = self.url
-    //    );
-
-    //    let response = self.client.post(url).multipart().send()?.await?;
-    //    Ok(response)
-    //}
 }
 
 fn file_to_body(file: File) -> Part {
