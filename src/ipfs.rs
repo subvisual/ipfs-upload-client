@@ -3,7 +3,7 @@ use reqwest::{multipart, multipart::Part, Body, Client};
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
-#[warn(clippy::upper_case_acronyms)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct IPFS {
     client: Client,
     url: String,
@@ -41,7 +41,6 @@ impl IPFS {
 
         Ok(response)
     }
-
     pub async fn add_directory(
         &self,
         file_paths: Vec<String>,

@@ -30,7 +30,7 @@ async fn main() {
     let id = args.id;
     let secret = args.secret;
     let url = args.url;
-    let pin_value = args.pin;
+    let _pin_value = args.pin;
     let path = args.path;
     let multiple_files = args.multiple_files;
 
