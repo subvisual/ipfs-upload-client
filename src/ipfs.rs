@@ -1,3 +1,4 @@
+use futures::{stream, StreamExt};
 use reqwest::{multipart, multipart::Part, Body, Client};
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -39,6 +40,49 @@ impl IPFS {
             .await?;
 
         Ok(response)
+    }
+    pub async fn add_directory(
+        &self,
+        file_paths: Vec<String>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let mut form = multipart::Form::new();
+
+        let bodies = stream::iter(file_paths)
+            .map(|path| self.process_path(path))
+            .buffer_unordered(100)
+            .collect::<Vec<Result<Part, Box<dyn std::error::Error>>>>()
+            .await;
+
+        for b in bodies {
+            match b {
+                Ok(body) => {
+                    form = form.part("file", body);
+                }
+                Err(e) => eprintln!("{}", e),
+            }
+        }
+
+        let url = format!("{url}/api/v0/add?wrap-with-directory=true", url = self.url);
+        let token = format!("{}:{}", self.id, self.secret);
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(token)
+            .multipart(form)
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        Ok(response)
+    }
+
+    async fn process_path(&self, path: String) -> Result<Part, Box<dyn std::error::Error>> {
+        let future_file = File::open(path);
+        let file: File = future_file.await?;
+
+        let body = file_to_body(file);
+        Ok(body)
     }
 }
 

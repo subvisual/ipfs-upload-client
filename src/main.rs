@@ -3,6 +3,7 @@ mod ipfs;
 use crate::ipfs::IPFS;
 use clap::Parser;
 use std::fs::metadata;
+use std::fs::read_dir;
 
 const INFURA_API: &str = "https://ipfs.infura.io:5001";
 
@@ -34,6 +35,15 @@ async fn main() {
     if is_file {
         let api = IPFS::new(url, id, secret);
         let out = api.add_file(&path).await;
+        println!("{:?}", out);
+    } else {
+        let paths = read_dir(&path)
+            .expect("not a valid dir")
+            .filter_map(|e| e.ok())
+            .map(|e| e.path().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let api = IPFS::new(url, id, secret);
+        let out = api.add_directory(paths).await;
         println!("{:?}", out);
     }
 }
