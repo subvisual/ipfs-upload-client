@@ -1,13 +1,9 @@
 use futures::{stream, StreamExt};
-use reqwest::{
-    multipart,
-    multipart::{Form, Part},
-    Body, Client,
-};
-use std::sync::{Arc, Condvar, RwLock};
+use reqwest::{multipart, multipart::Part, Body, Client};
 use tokio::fs::File;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+#[allow(clippy::upper_case_acronyms)]
 pub struct IPFS {
     client: Client,
     url: String,
@@ -45,20 +41,14 @@ impl IPFS {
 
         Ok(response)
     }
-
     pub async fn add_directory(
         &self,
         file_paths: Vec<String>,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let mut form = multipart::Form::new();
 
-        //for file_path in file_paths {
-        //    let file = File::open(file_path).await?;
-        //    form.part("file", file_to_body(file));
-        //}
-        //
         let bodies = stream::iter(file_paths)
-            .map(|path| self.process_path(path.to_owned()))
+            .map(|path| self.process_path(path))
             .buffer_unordered(100)
             .collect::<Vec<Result<Part, Box<dyn std::error::Error>>>>()
             .await;
@@ -72,30 +62,21 @@ impl IPFS {
             }
         }
 
-        loop {
-            let url = format!("{url}/api/v0/add?wrap-with-directory=true", url = self.url);
-            let token = format!("{}:{}", self.id, self.secret);
-            let response = self
-                .client
-                .post(url)
-                .bearer_auth(token)
-                .multipart(form)
-                .send()
-                .await?
-                .text()
-                .await?;
+        let url = format!("{url}/api/v0/add?wrap-with-directory=true", url = self.url);
+        let token = format!("{}:{}", self.id, self.secret);
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(token)
+            .multipart(form)
+            .send()
+            .await?
+            .text()
+            .await?;
 
-            return Ok(response);
-        }
+        Ok(response)
     }
 
-    //       let new_form: Arc<RwLock<Form>> = bodies.fold(form, move |form_move, body| {
-    //           if let Ok(form_locked) = form.write() {
-    //               form_locked.part("file", body);
-    //           }
-
-    //           form
-    //       });
     async fn process_path(&self, path: String) -> Result<Part, Box<dyn std::error::Error>> {
         let future_file = File::open(path);
         let file: File = future_file.await?;
