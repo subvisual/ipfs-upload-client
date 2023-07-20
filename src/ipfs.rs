@@ -77,6 +77,47 @@ impl IPFS {
         Ok(response)
     }
 
+    pub async fn add_multiple_files(
+        &self,
+        file_paths: Vec<String>,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let bodies = stream::iter(file_paths)
+            .map(|path| {
+                let client_async = &self.client;
+                async move {
+                    let mut form = multipart::Form::new();
+                    let body = self.process_path(path.to_owned()).await?;
+                    form = form.part("file", body);
+
+                    let url = format!("{url}/api/v0/add", url = self.url);
+                    let token = format!("{}:{}", self.id, self.secret);
+                    let response = client_async
+                        .post(url)
+                        .bearer_auth(token)
+                        .multipart(form)
+                        .send()
+                        .await?
+                        .text()
+                        .await?;
+                    Ok::<String, Box<dyn std::error::Error>>(response)
+                }
+            })
+            .buffer_unordered(100)
+            .filter_map(|request| async move {
+                match request {
+                    Ok(r) => Some(r),
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        None
+                    }
+                }
+            })
+            .collect::<Vec<String>>()
+            .await;
+
+        Ok(bodies)
+    }
+
     async fn process_path(&self, path: String) -> Result<Part, Box<dyn std::error::Error>> {
         let future_file = File::open(path);
         let file: File = future_file.await?;
